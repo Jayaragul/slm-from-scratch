@@ -88,29 +88,50 @@ model.eval()
 
 print("Model loaded successfully.")
 enc = tiktoken.get_encoding("gpt2")
-@torch.no_grad()
+
 @torch.no_grad()
 def generate(
     prompt,
-    max_new_tokens=120,
-    temperature=0.4,
-    top_k=50
+    max_new_tokens=200,
+    temperature=0.8,
+    top_k=None,
+    top_p=0.9,
+    repetition_penalty=1.15,
+    eos_token_id=None,
 ):
     model.eval()
     idx = torch.tensor(enc.encode(prompt), dtype=torch.long)[None, :].to(device)
+    eos_id = eos_token_id if eos_token_id is not None else enc.eot_token
+
     for _ in range(max_new_tokens):
         idx_cond = idx[:, -GPTConfig.block_size:]
         logits = model(idx_cond)
 
-        logits = logits[:, -1, :] / temperature
+        logits = logits[:, -1, :]
+        logits = logits / max(temperature, 1e-5)
 
-        # top-k sampling
-        v, _ = torch.topk(logits, top_k)
-        logits[logits < v[:, [-1]]] = -float("inf")
+        if repetition_penalty != 1.0:
+            for tok in set(idx[0].tolist()):
+                tok_logit = logits[0, tok]
+                logits[0, tok] = torch.where(tok_logit > 0, tok_logit / repetition_penalty, tok_logit * repetition_penalty)
+
+        if top_k is not None:
+            v, _ = torch.topk(logits, top_k)
+            logits[logits < v[:, [-1]]] = float("-inf")
+
+        if top_p is not None and 0 < top_p < 1.0:
+            sorted_logits, sorted_indices = torch.sort(logits, descending=True)
+            cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+            sorted_indices_to_remove = cumulative_probs > top_p
+            sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+            sorted_indices_to_remove[..., 0] = False
+            indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+            logits = logits.masked_fill(indices_to_remove, float("-inf"))
 
         probs = F.softmax(logits, dim=-1)
         next_token = torch.multinomial(probs, num_samples=1)
-        if next_token.item() == enc.eot_token:
+
+        if next_token.item() == eos_id:
             break
 
         idx = torch.cat([idx, next_token], dim=1)
@@ -122,4 +143,4 @@ def generate(
 # TEST
 # ----------------------------
 print("\n--- SAMPLE OUTPUT ---\n")
-print(generate("Hi, how are you"))
+print(generate("Once upon a time"))

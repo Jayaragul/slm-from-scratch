@@ -1,24 +1,24 @@
-# Large model files (>100MB)
+# Model checkpoints
 *.pt
 *.pth
-*.bin
 
-# Training data
+# Binary data
 *.bin
 train.bin
 val.bin
 
-# Python
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
 
-# IDE
+# Environments
+.env
+venv/
+env/
+.venv/
+
+# IDE/editor
 .vscode/
 .idea/
 *.swp
@@ -27,7 +27,3 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
-
-# Temporary
-*.tmp
-*.log
