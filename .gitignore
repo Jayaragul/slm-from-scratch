@@ -1,0 +1,33 @@
+# Large model files (>100MB)
+*.pt
+*.pth
+*.bin
+
+# Training data
+*.bin
+train.bin
+val.bin
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.tmp
+*.log
