@@ -78,3 +78,13 @@ The project automatically detects and uses:
 - The model uses causal self-attention to prevent the attention from looking at future tokens
 - Supports mixed precision training with proper gradient clipping
 - Includes learning rate warmup for better convergence
+
+## References
+
+- **Attention is All You Need** - Vaswani et al., 2017
+  - https://arxiv.org/abs/1706.03762
+  - Foundational paper introducing the Transformer architecture
+
+- **TinyStories: How Small Can Language Models Be and Still Speak Coherently?** - Zhang et al., 2023
+  - https://arxiv.org/abs/2305.07759
+  - Demonstrates effective language model training on small datasets
