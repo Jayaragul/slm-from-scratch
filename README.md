@@ -1,90 +1,108 @@
-# TINY Stories Dataset - GPT Training Project
+# SLM from scratch — a 27.8M-parameter GPT trained on TinyStories
 
-This project implements a minimal GPT model for training on the TINY Stories dataset.
+A small language model built from the ground up in PyTorch: the transformer, the attention
+mechanism, the tokenizer pipeline and the training loop are all written by hand. No
+`transformers`, no `nanoGPT` fork, no trainer abstraction.
 
-## Project Structure
+The goal was not to beat a benchmark — it was to understand every tensor that moves. At this
+scale nothing hides: if the causal mask is wrong, or the learning-rate schedule is wrong, the
+loss tells you immediately.
 
-- **train.py** - Main training script that trains the GPT model
-- **test.py** - Inference and testing script for the trained model
-- **tockenizer.py** - Data preprocessing script that converts text data to binary format using GPT-2 tokenizer
-- **tinystories_28M_final.pt** - Pre-trained model checkpoint
+**[⬇ Download the trained weights (108 MB)](../../releases/tag/model)** — run inference without
+training anything.
 
-## Requirements
+---
 
-- Python 3.8+
-- PyTorch 2.0+
-- tiktoken (OpenAI's tokenizer)
-- numpy
-- tqdm
+## The model
 
-Install all dependencies:
+| | |
+|---|---|
+| **Parameters** | **27,846,000** (27.8M), with tied input/output embeddings |
+| Architecture | Decoder-only transformer (GPT-style) |
+| Layers | 8 |
+| Attention heads | 8 (head dimension 42) |
+| Embedding dimension | 336 |
+| Context length | 256 tokens |
+| Feed-forward | 4× expansion (1344), GELU |
+| Vocabulary | 50,257 — GPT-2 BPE via `tiktoken` |
+| Dropout | 0.1 |
+
+Where the parameters live:
+
+```
+token + position embeddings   16,972,368   (61%)
+8 transformer blocks          10,872,960   (39%)
+final layer norm                     672
+───────────────────────────────────────────
+total (unique, tied)          27,846,000
+```
+
+At this scale the embedding table dominates — a direct consequence of borrowing GPT-2's
+50k vocabulary for a dataset with a small effective vocabulary. Tying `lm_head.weight` to
+`wte.weight` saves a further 16.9M parameters that would otherwise sit in the output projection.
+
+## Implementation notes
+
+**Causal attention is written out, not called.** `CausalSelfAttention` computes
+`softmax(QKᵀ/√d_k)` explicitly and applies a lower-triangular mask registered as a buffer,
+rather than delegating to `F.scaled_dot_product_attention`. Slower, but the masking is visible
+and debuggable — which was the point.
+
+**Pre-norm residual blocks.** LayerNorm is applied *before* attention and MLP
+(`x = x + attn(ln1(x))`), which keeps gradients well-behaved at depth without needing careful
+residual scaling.
+
+**Data is memory-mapped, not loaded.** `tokenizer.py` pre-encodes the corpus once into a flat
+`uint16` binary; training then `np.memmap`s it and slices random windows. The dataset never
+enters RAM, and batch construction is a pointer offset instead of a tokenization pass.
+
+**Training stability.** AdamW (β = 0.9/0.95, weight decay 0.1), gradient clipping at 1.0,
+2,000 steps of linear warmup followed by cosine decay to zero, and mixed-precision autocast
+with a gradient scaler on CUDA. Each step sees 32 × 256 = 8,192 tokens.
+
+## Running it
+
 ```bash
 pip install -r requirements.txt
 ```
 
-## Usage
+**Inference** — download the checkpoint from the
+[release](../../releases/tag/model) into the project root, then:
 
-### 1. Data Preprocessing
-
-Convert your text data to binary format:
-```bash
-python tockenizer.py
-```
-
-The script expects:
-- `TinyStoriesV2-GPT4-train.txt` - Training data
-- `TinyStoriesV2-GPT4-val.txt` - Validation data
-
-Output:
-- `train.bin` - Binary training data
-- `val.bin` - Binary validation data
-
-### 2. Training
-
-Train the model:
-```bash
-python train.py
-```
-
-Configuration:
-- Batch size: 32
-- Learning rate: 3e-4
-- Max steps: 200,000
-- Model: 8 layers, 8 attention heads, 336 embeddings
-
-### 3. Testing/Inference
-
-Test the trained model:
 ```bash
 python test.py
 ```
 
-## Model Architecture
+**Training from zero** — get `TinyStoriesV2-GPT4-train.txt` and `TinyStoriesV2-GPT4-val.txt`
+from the [TinyStories dataset](https://huggingface.co/datasets/roneneldan/TinyStories), then:
 
-- **Vocab Size**: 50,257 (GPT-2)
-- **Block Size**: 256
-- **Layers**: 8
-- **Attention Heads**: 8
-- **Embedding Dimension**: 336
+```bash
+python tokenizer.py   # encodes the corpus -> train.bin / val.bin
+python train.py       # trains and writes tinystories_28M_final.pt
+```
 
-## Device Support
+Training runs on CUDA if available and falls back to CPU. Validation loss is estimated every
+2,000 steps over 200 batches.
 
-The project automatically detects and uses:
-- **GPU (CUDA)** - if available
-- **CPU** - fallback if CUDA not available
+## Files
 
-## Notes
+| File | Purpose |
+|---|---|
+| `train.py` | Model definition (attention, blocks, GPT) and the training loop |
+| `tokenizer.py` | One-off corpus encoding into memory-mappable `uint16` binaries |
+| `test.py` | Loads a checkpoint and generates text |
 
-- The model uses causal self-attention to prevent the attention from looking at future tokens
-- Supports mixed precision training with proper gradient clipping
-- Includes learning rate warmup for better convergence
+Checkpoints and `.bin` files are gitignored — the trained weights live in the
+[release](../../releases/tag/model) instead.
 
 ## References
 
-- **Attention is All You Need** - Vaswani et al., 2017
-  - https://arxiv.org/abs/1706.03762
-  - Foundational paper introducing the Transformer architecture
+- Vaswani et al., [*Attention Is All You Need*](https://arxiv.org/abs/1706.03762) (2017) — the
+  transformer architecture implemented here.
+- Eldan & Li, [*TinyStories: How Small Can Language Models Be and Still Speak Coherent
+  English?*](https://arxiv.org/abs/2305.07759) (2023) — the dataset, and the result that models
+  in this size class can still produce fluent text.
 
-- **TinyStories: How Small Can Language Models Be and Still Speak Coherently?** - Zhang et al., 2023
-  - https://arxiv.org/abs/2305.07759
-  - Demonstrates effective language model training on small datasets
+## Licence
+
+MIT
