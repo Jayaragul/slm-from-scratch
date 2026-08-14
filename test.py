@@ -1,8 +1,9 @@
 import math
+
+import tiktoken
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import tiktoken
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
@@ -72,7 +73,7 @@ class GPT(nn.Module):
         self.lm_head.weight = self.wte.weight
 
     def forward(self, idx):
-        B, T = idx.size()
+        _B, T = idx.size()
         pos = torch.arange(T, device=idx.device).unsqueeze(0)
 
         x = self.wte(idx) + self.wpe(pos)

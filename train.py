@@ -1,10 +1,10 @@
 import math
-import time
+
 import numpy as np
+import tiktoken
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import tiktoken
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -116,7 +116,7 @@ class GPT(nn.Module):
         self.lm_head.weight = self.wte.weight
 
     def forward(self, idx, targets=None):
-        B, T = idx.size()
+        _B, T = idx.size()
         pos = torch.arange(T, device=idx.device).unsqueeze(0)
 
         x = self.drop(self.wte(idx) + self.wpe(pos))
@@ -127,8 +127,9 @@ class GPT(nn.Module):
 
         loss = None
         if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)),
-                                   targets.view(-1))
+            # reshape, not view: targets may be a non-contiguous slice
+            loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)),
+                                   targets.reshape(-1))
         return logits, loss
 
 model = GPT(GPTConfig()).to(device)

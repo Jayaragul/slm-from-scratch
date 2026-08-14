@@ -1,0 +1,9 @@
+line-length = 100
+target-version = "py38"
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "RUF"]
+ignore = [
+    "E501",     # long lines are fine in tensor-shape comments
+    "PLR0402",  # `import torch.nn as nn` is the idiomatic PyTorch spelling
+]

@@ -1,7 +1,7 @@
 import os
+
 import numpy as np
 import tiktoken
-from tqdm import tqdm
 
 train_file = "TinyStoriesV2-GPT4-train.txt"
 valid_file = "TinyStoriesV2-GPT4-val.txt"
@@ -13,7 +13,7 @@ def pretokenize_to_bin(filename, out_filename):
         print(f"Error: {filename} not found.")
         return
     
-    with open(filename, 'r', encoding='utf-8') as f:
+    with open(filename, encoding='utf-8') as f:
         data = f.read()
     
     ids = enc.encode_ordinary(data)
