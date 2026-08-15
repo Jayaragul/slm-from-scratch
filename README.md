@@ -14,6 +14,8 @@ loss tells you immediately.
 **[⬇ Download the trained weights (108 MB)](../../releases/tag/model)** — run inference without
 training anything.
 
+I wrote up the build here: [*From 'Attention Is All You Need' to My Own GPT*](https://medium.com/@jayaragul/from-attention-is-all-you-need-to-my-own-gpt-training-an-slm-from-scratch-b426ab9ec604).
+
 ---
 
 ## The model
