@@ -1,5 +1,8 @@
 # SLM from scratch — a 27.8M-parameter GPT trained on TinyStories
 
+[![CI](https://github.com/Jayaragul/slm-from-scratch/actions/workflows/ci.yml/badge.svg)](https://github.com/Jayaragul/slm-from-scratch/actions/workflows/ci.yml) ![Python](https://img.shields.io/badge/python-3.8%2B-blue) ![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c) ![Parameters](https://img.shields.io/badge/parameters-27.8M-E07A3F) ![License](https://img.shields.io/badge/license-MIT-green)
+
+
 A small language model built from the ground up in PyTorch: the transformer, the attention
 mechanism, the tokenizer pipeline and the training loop are all written by hand. No
 `transformers`, no `nanoGPT` fork, no trainer abstraction.
